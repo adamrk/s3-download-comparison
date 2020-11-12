@@ -1450,7 +1450,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust-s3-benchmark"
+name = "rust-s3-bench"
 version = "0.1.0"
 dependencies = [
  "rust-s3",
