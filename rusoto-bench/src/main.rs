@@ -174,6 +174,7 @@ async fn main() {
                     key_prefix,
                 },
         } => {
+            println!("Time, Bytes downloaded, Throughput, Avg first byte, Avg last byte");
             for num_workers in (start_num_workers..80).step_by(5) {
                 download_test(num_workers, samples, region.clone(), &bucket, &key_prefix).await;
             }
