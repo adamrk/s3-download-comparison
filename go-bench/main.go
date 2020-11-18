@@ -1,19 +1,21 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 )
 
 func main() {
-	client := s3.New(s3.Options{Region: "us-east-1"})
+	sess, _ := session.NewSession(&aws.Config{Region: aws.String("us-east-1")})
+	client := s3.New(sess, aws.NewConfig())
 	threads := 2
 	samples := 3
+	fmt.Println("Total time, Total bytes, Throughput, Avg first byte, Avg last byte")
 	runTests(client, threads, samples)
 }
 
@@ -22,7 +24,7 @@ type latency struct {
 	lastByte  time.Duration
 }
 
-func runTests(s3Client *s3.Client, threads int, samples int) {
+func runTests(s3Client *s3.S3, threads int, samples int) {
 	objectSize := 8388608
 	threadCount := threads
 	// a channel to submit the test tasks
@@ -49,7 +51,7 @@ func runTests(s3Client *s3.Client, threads int, samples int) {
 					Key:    aws.String(key),
 				})
 
-				resp, err := s3Client.GetObject(context.Background(), &req)
+				resp, err := s3Client.GetObject(&req)
 
 				// if a request fails, exit
 				if err != nil {
@@ -118,7 +120,7 @@ func runTests(s3Client *s3.Client, threads int, samples int) {
 
 	// print the results to stdout
 	fmt.Printf(
-		"%9.4f s, %v B, %9.1f MB/s, %5.0f ms, %5.0f ms",
+		"%9.4f s, %v B, %9.1f MB/s, %5.0f ms, %5.0f ms\n",
 		totalTime.Seconds(),
 		objectSize*samples,
 		rate,
