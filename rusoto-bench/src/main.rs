@@ -115,7 +115,7 @@ pub async fn download_test(
 struct Location {
     #[structopt(long = "bucket", default_value = "abk-test-rusoto-download")]
     bucket: String,
-    #[structopt(long = "key-prefix", default_value = "test-object")]
+    #[structopt(long = "key-prefix", default_value = "test-object-8388608")]
     key_prefix: String,
     #[structopt(long = "region", default_value = "us-east-1")]
     region: Region,
@@ -132,8 +132,8 @@ enum Command {
         location: Location,
     },
     Download {
-        #[structopt(long = "start-num-workers")]
-        start_num_workers: u64,
+        #[structopt(long = "num-workers")]
+        num_workers: u64,
         #[structopt(long = "samples")]
         samples: u32,
         #[structopt(flatten)]
@@ -165,7 +165,7 @@ async fn main() {
             .await
         }
         Command::Download {
-            start_num_workers,
+            num_workers,
             samples,
             location:
                 Location {
@@ -175,9 +175,7 @@ async fn main() {
                 },
         } => {
             println!("Time, Bytes downloaded, Throughput, Avg first byte, Avg last byte");
-            for num_workers in (start_num_workers..80).step_by(5) {
-                download_test(num_workers, samples, region.clone(), &bucket, &key_prefix).await;
-            }
+            download_test(num_workers, samples, region.clone(), &bucket, &key_prefix).await;
         }
     }
 }

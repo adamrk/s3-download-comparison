@@ -9,4 +9,4 @@ edition = "2018"
 [dependencies]
 rust-s3 = "0.26"
 structopt = "0.3"
-tokio = { version = "0.3", features = ["full"] }
+tokio = { version = "0.2", features = ["full"] }
