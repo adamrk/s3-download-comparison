@@ -1,5 +1,5 @@
 [package]
-name = "s3-speed-test"
+name = "rusoto-bench"
 version = "0.1.0"
 authors = ["adamrk <ark.email@gmail.com>"]
 edition = "2018"
