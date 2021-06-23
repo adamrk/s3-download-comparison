@@ -1,4 +1,3 @@
-use std::error::Error;
 use std::sync::{Arc, Mutex};
 
 extern crate jemallocator;
@@ -14,7 +13,9 @@ use tracing_subscriber::fmt::SubscriberBuilder;
 
 use structopt::StructOpt;
 
-fn take_job(to_do: &Mutex<u32>) -> bool {
+type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
+
+async fn take_job(to_do: &Mutex<u32>) -> bool {
     let mut jobs_left = to_do.lock().unwrap();
     if *jobs_left <= 0 {
         false
@@ -24,7 +25,7 @@ fn take_job(to_do: &Mutex<u32>) -> bool {
     }
 }
 
-async fn do_downloads(num_workers: u32, samples: u32, bucket: &str, key_prefix: &str, region: &str) -> Option<&str> {
+async fn do_downloads(num_workers: u32, samples: u32, bucket: &str, key_prefix: &str, region: &str) -> Result<&'static str, Error> {
     let to_do = Arc::new(Mutex::new(samples));
     let mut jobs = vec![];
     let start = std::time::Instant::now();
@@ -38,7 +39,6 @@ async fn do_downloads(num_workers: u32, samples: u32, bucket: &str, key_prefix: 
         .region(Region::new(region))
         .build();
 
-    // XXX: Does the client need to be within an Arc?
     // XXX: Is it fair to compare blocking impls like the rust-s3 one with this async? Perhaps should implement rust-s3 async too.
     let client = s3::Client::from_conf(conf);
 
@@ -48,12 +48,11 @@ async fn do_downloads(num_workers: u32, samples: u32, bucket: &str, key_prefix: 
         let job = std::thread::spawn(move || {
             let mut worker_bytes = 0;
             loop {
-                if take_job(to_do.as_ref()) {
+                if take_job(to_do.as_ref()).await {
                     let resp = client.get_object().bucket(bucket).key(key_prefix).send().await?;
                     let data = resp.body.collect().await?;
 
-                    assert_eq!(code, 200);
-                    worker_bytes += data.len();
+                    worker_bytes += data.into_bytes().len();
                 } else {
                     break;
                 }
@@ -74,7 +73,7 @@ async fn do_downloads(num_workers: u32, samples: u32, bucket: &str, key_prefix: 
         total_bytes as f64 / (time.as_secs_f64() * 1024.0 * 1024.0)
     );
 
-    Some("fine")
+    Ok("fine")
 }
 
 #[derive(StructOpt, Debug)]
@@ -91,7 +90,8 @@ struct Args {
     region: String,
 }
 
-fn main() {
+#[tokio::main]
+async fn main() -> Result<(), Error>  {
     let Args {
         workers,
         samples,
@@ -101,4 +101,6 @@ fn main() {
     } = Args::from_args();
     println!("Time, Total Bytes, Throughput");
     do_downloads(workers, samples, &bucket, &key_prefix, &region);
+
+    Ok(())
 }
